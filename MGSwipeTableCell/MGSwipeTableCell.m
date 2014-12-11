@@ -156,11 +156,31 @@
         _expansionBackground.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         _expansionBackground.backgroundColor = _expandedButton.backgroundColor;
         if (UIColor.clearColor == _expandedButton.backgroundColor) {
-          // Provides access to more complex content for display on the background
-          _expansionBackground.layer.contents = _expandedButton.layer.contents;
+            BOOL set = NO;
+            if ([_expandedButton isKindOfClass:[UIButton class]]) {
+                UIImage *im = [((UIButton *) _expandedButton) backgroundImageForState:UIControlStateNormal];
+                if (UIImageResizingModeTile == im.resizingMode) {
+                    UIImageView *iview = [[UIImageView alloc] initWithImage:im];
+                    iview.frame = _expansionBackground.bounds;
+                    iview.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
+                    [_expansionBackground addSubview:iview];
+                    set = YES;
+                }
+            }
+            if (!set) {
+                // Provides access to more complex content for display on the background
+                _expansionBackground.layer.contents = _expandedButton.layer.contents;
+            }
         }
         [_container addSubview:_expansionBackground];
+        [_container bringSubviewToFront:_expandedButton];
         
+        for (UIView * button in _buttons) {
+            if (button != _expandedButton) {
+                button.alpha = 0.f;
+            }
+        }
+      
         CGFloat duration = _fromLeft ? _cell.leftExpansion.animationDuration : _cell.rightExpansion.animationDuration;
         [UIView animateWithDuration: duration animations:^{
             _expandedButton.hidden = NO;
@@ -172,7 +192,7 @@
                 _expandedButton.frame = CGRectMake(0, 0, _expandedButton.bounds.size.width, _expandedButton.bounds.size.height);
                 _expandedButton.autoresizingMask|= UIViewAutoresizingFlexibleRightMargin;
             }
-            _expansionBackground.frame = [self expansionBackgroundRect:_expandedButton];
+            _expansionBackground.frame = _container.bounds;
 
         } completion:^(BOOL finished) {
         }];
@@ -195,9 +215,13 @@
         [UIView animateWithDuration: animated ? duration : 0.0 animations:^{
             _container.frame = self.bounds;
             [self resetButtons];
-            _expansionBackgroundAnimated.frame = [self expansionBackgroundRect:_expandedButtonAnimated];
+            _expansionBackgroundAnimated.frame = _container.bounds;
         } completion:^(BOOL finished) {
             [_expansionBackgroundAnimated removeFromSuperview];
+            
+            for (UIView * button in _buttons) {
+                button.alpha = 1.f;
+            }
         }];
     }
     else if (_expansionBackground) {
@@ -317,7 +341,7 @@
         case MGSwipeTransition3D: [self transition3D:t]; break;
     }
     if (_expandedButtonAnimated && _expansionBackgroundAnimated) {
-        _expansionBackgroundAnimated.frame = [self expansionBackgroundRect:_expandedButtonAnimated];
+        _expansionBackgroundAnimated.frame = _container.bounds;
     }
 }
 
